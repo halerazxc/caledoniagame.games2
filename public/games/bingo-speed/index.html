@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speed Bingo - Free Demo</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: #0D0A0A; color: #F5F0E8; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
+h1 { color: #FFD700; font-size: 1.5rem; margin-bottom: 10px; }
+.timer { color: #FF4444; font-size: 1.2rem; margin-bottom: 10px; font-weight: bold; }
+.grid { display: grid; grid-template-columns: repeat(3, 70px); gap: 8px; margin: 15px 0; }
+.cell { width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(212,175,55,0.3); border-radius: 10px; background: linear-gradient(145deg, #1A1210, #2D1F1F); font-size: 1.4rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+.cell.called { border-color: #FFD700; background: rgba(255,215,0,0.1); }
+.cell.daubed { background: linear-gradient(135deg, #FFD700, #B8860B); color: #0D0A0A; border-color: #FFD700; }
+.cell.win { animation: pulse 0.5s ease infinite alternate; }
+@keyframes pulse { to { box-shadow: 0 0 20px rgba(255,215,0,0.5); transform: scale(1.05); } }
+.called-nums { display: flex; flex-wrap: wrap; gap: 5px; max-width: 300px; justify-content: center; margin: 10px 0; }
+.called-num { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #B8A88A; }
+.called-num.latest { background: #FFD700; color: #0D0A0A; font-weight: bold; }
+.btn { background: linear-gradient(135deg, #FFD700, #B8860B); color: #0D0A0A; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; margin: 5px; transition: all 0.2s; }
+.btn:hover { box-shadow: 0 0 15px rgba(255,215,0,0.3); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.status { color: #50C878; font-size: 1rem; margin: 8px 0; min-height: 24px; }
+.disclaimer { margin-top: auto; padding-top: 15px; color: #7A6F5F; font-size: 0.7rem; text-align: center; }
+</style>
+</head>
+<body>
+<h1>Speed Bingo</h1>
+<div class="timer" id="timer">00:00</div>
+<div class="status" id="status">Press Start to play!</div>
+<div class="grid" id="grid"></div>
+<div>
+  <button class="btn" id="startBtn" onclick="startGame()">Start Game</button>
+  <button class="btn" id="newBtn" onclick="newCard()" style="background:linear-gradient(135deg,#8B0000,#A52A2A);color:#F5F0E8">New Card</button>
+</div>
+<div class="called-nums" id="calledNums"></div>
+<p class="disclaimer">FREE DEMO — No Real Money. For entertainment only.</p>
+
+<script>
+let card = [], called = [], interval = null, gameActive = false, startTime = 0;
+const grid = document.getElementById('grid');
+const calledNums = document.getElementById('calledNums');
+const status = document.getElementById('status');
+const timerEl = document.getElementById('timer');
+
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function generateCard() {
+  const nums = shuffle(Array.from({length: 30}, (_, i) => i + 1)).slice(0, 9);
+  return nums;
+}
+
+function renderCard() {
+  grid.innerHTML = '';
+  card.forEach((num, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.textContent = num;
+    cell.dataset.index = i;
+    cell.onclick = () => daubCell(i);
+    grid.appendChild(cell);
+  });
+}
+
+function newCard() {
+  clearInterval(interval);
+  gameActive = false;
+  called = [];
+  card = generateCard();
+  calledNums.innerHTML = '';
+  status.textContent = 'Press Start to play!';
+  timerEl.textContent = '00:00';
+  renderCard();
+  document.getElementById('startBtn').disabled = false;
+}
+
+function startGame() {
+  if (gameActive) return;
+  gameActive = true;
+  called = [];
+  calledNums.innerHTML = '';
+  startTime = Date.now();
+  document.getElementById('startBtn').disabled = true;
+  status.textContent = 'Numbers calling...';
+  renderCard();
+  const pool = shuffle(Array.from({length: 30}, (_, i) => i + 1));
+  let idx = 0;
+  interval = setInterval(() => {
+    if (idx >= pool.length || !gameActive) { clearInterval(interval); if (gameActive) { status.textContent = 'All numbers called!'; gameActive = false; } return; }
+    called.push(pool[idx]);
+    renderCalledNums();
+    updateCells();
+    idx++;
+    updateTimer();
+  }, 1500);
+  requestAnimationFrame(function tick() { if (gameActive) { updateTimer(); requestAnimationFrame(tick); } });
+}
+
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  timerEl.textContent = `${m}:${s}`;
+}
+
+function renderCalledNums() {
+  calledNums.innerHTML = '';
+  called.forEach((n, i) => {
+    const el = document.createElement('div');
+    el.className = 'called-num' + (i === called.length - 1 ? ' latest' : '');
+    el.textContent = n;
+    calledNums.appendChild(el);
+  });
+}
+
+function updateCells() {
+  document.querySelectorAll('.cell').forEach(cell => {
+    const num = card[cell.dataset.index];
+    if (called.includes(num)) cell.classList.add('called');
+  });
+}
+
+function daubCell(idx) {
+  if (!gameActive) return;
+  const num = card[idx];
+  if (!called.includes(num)) return;
+  const cells = document.querySelectorAll('.cell');
+  cells[idx].classList.add('daubed');
+  checkWin();
+}
+
+function checkWin() {
+  const cells = document.querySelectorAll('.cell');
+  const daubed = Array.from(cells).map(c => c.classList.contains('daubed'));
+  const lines = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  for (const line of lines) {
+    if (line.every(i => daubed[i])) {
+      gameActive = false;
+      clearInterval(interval);
+      status.textContent = 'BINGO! You win!';
+      status.style.color = '#FFD700';
+      line.forEach(i => cells[i].classList.add('win'));
+      return;
+    }
+  }
+  if (daubed.every(Boolean)) {
+    gameActive = false;
+    clearInterval(interval);
+    status.textContent = 'FULL HOUSE! Amazing!';
+    status.style.color = '#FFD700';
+    cells.forEach(c => c.classList.add('win'));
+  }
+}
+
+newCard();
+</script>
+</body>
+</html>

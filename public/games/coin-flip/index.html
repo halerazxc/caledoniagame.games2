@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coin Flip Challenge</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0D0A0A;
+      color: #F5F0E8;
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .disclaimer { font-size: 0.7rem; color: #888; margin-bottom: 0.5rem; }
+    h1 { color: #FFD700; font-size: 1.5rem; margin-bottom: 1rem; }
+    .coin-container {
+      perspective: 1000px;
+      margin-bottom: 1.5rem;
+    }
+    .coin-wrap { perspective: 600px; }
+    .coin {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FFD700 0%, #B8860B 50%, #FFD700 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #0D0A0A;
+      box-shadow: inset -5px -5px 15px rgba(0,0,0,0.3), 0 0 30px rgba(255,215,0,0.4);
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+    }
+    .coin.flipping { animation: flip3d 1.2s ease-out forwards; }
+    @keyframes flip3d {
+      0% { transform: rotateY(0deg) rotateX(0deg); }
+      50% { transform: rotateY(900deg) rotateX(10deg); }
+      100% { transform: rotateY(1800deg) rotateX(0deg); }
+    }
+    .choice-btns { display: flex; gap: 1rem; margin-bottom: 1rem; }
+    .choice-btn {
+      background: #1a1515;
+      color: #FFD700;
+      border: 2px solid #FFD700;
+      padding: 0.6rem 1.5rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .choice-btn:hover:not(:disabled) { background: #FFD700; color: #0D0A0A; }
+    .choice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .double-btn {
+      background: linear-gradient(135deg, #FFD700, #B8860B);
+      color: #0D0A0A;
+      border: none;
+      padding: 0.5rem 1rem;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 1rem;
+    }
+    .double-btn:hover:not(:disabled) { opacity: 0.9; }
+    .double-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .stats {
+      background: rgba(255,215,0,0.1);
+      border: 1px solid #FFD700;
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      min-width: 200px;
+    }
+    .stats div { margin: 0.3rem 0; color: #F5F0E8; }
+    .stats .highlight { color: #FFD700; font-weight: bold; }
+    .streak { font-size: 1.2rem; color: #32CD32; }
+  </style>
+</head>
+<body>
+  <div class="disclaimer">FREE DEMO</div>
+  <h1>Coin Flip Challenge</h1>
+  <div class="coin-container coin-wrap">
+    <div class="coin" id="coin">?</div>
+  </div>
+  <div class="choice-btns">
+    <button class="choice-btn" id="headsBtn">HEADS</button>
+    <button class="choice-btn" id="tailsBtn">TAILS</button>
+  </div>
+  <button class="double-btn" id="doubleBtn">Double or Nothing</button>
+  <div class="stats">
+    <div>Total flips: <span class="highlight" id="totalFlips">0</span></div>
+    <div>Current streak: <span class="highlight streak" id="streak">0</span></div>
+    <div>Longest streak: <span class="highlight" id="longestStreak">0</span></div>
+  </div>
+
+  <script>
+    let flipping = false;
+    let totalFlips = 0;
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let lastChoice = null;
+
+    function flip(choice) {
+      if (flipping) return;
+      flipping = true;
+      document.getElementById('headsBtn').disabled = true;
+      document.getElementById('tailsBtn').disabled = true;
+      document.getElementById('doubleBtn').disabled = true;
+      const result = Math.random() < 0.5 ? 'H' : 'T';
+      const coin = document.getElementById('coin');
+      coin.textContent = '?';
+      coin.classList.add('flipping');
+      setTimeout(() => {
+        coin.textContent = result === 'H' ? 'H' : 'T';
+      coin.title = result === 'H' ? 'Heads' : 'Tails';
+        coin.classList.remove('flipping');
+        totalFlips++;
+        const won = (choice === 'H' && result === 'H') || (choice === 'T' && result === 'T');
+        if (won) {
+          currentStreak++;
+          longestStreak = Math.max(longestStreak, currentStreak);
+        } else {
+          currentStreak = 0;
+        }
+        lastChoice = choice;
+        document.getElementById('totalFlips').textContent = totalFlips;
+        document.getElementById('streak').textContent = currentStreak;
+        document.getElementById('longestStreak').textContent = longestStreak;
+        flipping = false;
+        document.getElementById('headsBtn').disabled = false;
+        document.getElementById('tailsBtn').disabled = false;
+        document.getElementById('doubleBtn').disabled = false;
+      }, 1000);
+    }
+
+    document.getElementById('headsBtn').onclick = () => flip('H');
+    document.getElementById('tailsBtn').onclick = () => flip('T');
+    document.getElementById('doubleBtn').onclick = function() {
+      if (flipping || lastChoice === null) return;
+      flip(lastChoice);
+    };
+  </script>
+</body>
+</html>

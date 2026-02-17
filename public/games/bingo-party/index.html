@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Party Bingo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0D0A0A;
+      color: #F5F0E8;
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .disclaimer { font-size: 0.7rem; color: #888; margin-bottom: 0.5rem; }
+    h1 { color: #FFD700; font-size: 1.5rem; margin-bottom: 0.5rem; text-shadow: 0 0 10px #FF69B4; }
+    .powerups {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .powerup-btn {
+      background: linear-gradient(135deg, #FF69B4, #FFD700);
+      color: #0D0A0A;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .powerup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .powerup-btn:not(:disabled):hover { transform: scale(1.05); }
+    .called-display {
+      background: rgba(255,105,180,0.15);
+      border: 1px solid #FF69B4;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      margin-bottom: 1rem;
+      min-height: 2.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+    .called-num {
+      background: linear-gradient(135deg, #FF69B4, #FFD700);
+      color: #0D0A0A;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+    .bingo-card {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2px;
+      background: linear-gradient(135deg, #FF69B4, #FFD700);
+      padding: 4px;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    .bingo-cell {
+      width: clamp(40px, 8vw, 56px);
+      height: clamp(40px, 8vw, 56px);
+      background: #0D0A0A;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: clamp(0.7rem, 2vw, 1rem);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .bingo-cell.free { background: #1a1515; color: #FF69B4; }
+    .bingo-cell.daubed { background: linear-gradient(135deg, #FF69B4, #FFD700); color: #0D0A0A; }
+    .bingo-cell:hover:not(.free):not(.daubed) { background: #2a2525; }
+    .bingo-header {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2px;
+      margin-bottom: 2px;
+    }
+    .bingo-header span {
+      background: #1a1515;
+      color: #FF69B4;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      border-radius: 4px;
+    }
+    .status { margin-top: 0.5rem; font-size: 1rem; color: #FFD700; }
+    .win-msg { font-size: 1.2rem; font-weight: bold; animation: pulse 1s infinite; }
+    @keyframes pulse { 50% { opacity: 0.7; } }
+  </style>
+</head>
+<body>
+  <div class="disclaimer">FREE DEMO</div>
+  <h1>Party Bingo</h1>
+  <div class="powerups">
+    <button class="powerup-btn" id="autoDaub">Auto-Daub (1x)</button>
+    <button class="powerup-btn" id="extraBall">Extra Ball (1x)</button>
+  </div>
+  <div class="called-display" id="calledDisplay"></div>
+  <div class="bingo-card">
+    <div class="bingo-header">
+      <span>B</span><span>I</span><span>N</span><span>G</span><span>O</span>
+    </div>
+    <div id="cardGrid"></div>
+  </div>
+  <div class="status" id="status">Waiting for next call...</div>
+  <div id="confettiContainer"></div>
+
+  <script>
+    const RANGES = { B: [1,15], I: [16,30], N: [31,45], G: [46,60], O: [61,75] };
+    const COLS = ['B','I','N','G','O'];
+    const COLORS = ['#FFD700','#FF69B4','#00CED1','#32CD32','#FF4500'];
+    let card = [], called = [], intervalId, gameOver = false;
+    let autoDaubUsed = false, extraBallUsed = false;
+
+    function initCard() {
+      card = [];
+      for (let c = 0; c < 5; c++) {
+        const [min, max] = RANGES[COLS[c]];
+        const used = new Set();
+        for (let r = 0; r < 5; r++) {
+          let n;
+          do { n = min + Math.floor(Math.random() * (max - min + 1)); } while (used.has(n));
+          used.add(n);
+          card.push({ col: c, row: r, num: r === 2 && c === 2 ? 'FREE' : n, daubed: false });
+        }
+      }
+    }
+
+    function renderCard() {
+      const grid = document.getElementById('cardGrid');
+      grid.innerHTML = '';
+      card.forEach((cell, i) => {
+        const el = document.createElement('div');
+        el.className = 'bingo-cell' + (cell.num === 'FREE' ? ' free' : '') + (cell.daubed ? ' daubed' : '');
+        el.textContent = cell.num;
+        el.dataset.i = i;
+        if (cell.num !== 'FREE') el.onclick = () => daub(i);
+        grid.appendChild(el);
+      });
+    }
+
+    function daub(i) {
+      if (gameOver) return;
+      const c = card[i];
+      if (c.num === 'FREE' || c.daubed) return;
+      if (called.includes(c.num)) {
+        c.daubed = true;
+        card[i] = c;
+        renderCard();
+        checkWin();
+      }
+    }
+
+    function autoDaubAll() {
+      card.forEach((c, i) => {
+        if (c.num !== 'FREE' && !c.daubed && called.includes(c.num)) {
+          card[i].daubed = true;
+        }
+      });
+      renderCard();
+      checkWin();
+    }
+
+    function checkWin() {
+      const rows = [0,0,0,0,0], cols = [0,0,0,0,0];
+      let diag1 = 0, diag2 = 0, full = 0;
+      for (let i = 0; i < 25; i++) {
+        const c = card[i];
+        if (c.daubed || c.num === 'FREE') {
+          const r = Math.floor(i / 5), col = i % 5;
+          rows[r]++; cols[col]++;
+          if (r === col) diag1++;
+          if (r + col === 4) diag2++;
+          full++;
+        }
+      }
+      if (rows.some(v => v === 5) || cols.some(v => v === 5) || diag1 === 5 || diag2 === 5) {
+        endGame('BINGO! You win!');
+        confetti();
+      } else if (full === 25) {
+        endGame('Full House! You win!');
+        confetti();
+      }
+    }
+
+    function confetti() {
+      const container = document.getElementById('confettiContainer');
+      container.innerHTML = '';
+      for (let i = 0; i < 80; i++) {
+        const p = document.createElement('div');
+        p.style.cssText = `position:fixed;width:8px;height:8px;background:${COLORS[i % COLORS.length]};left:${Math.random()*100}vw;top:-10px;border-radius:2px;animation:cf${i} 3s ease-out forwards;pointer-events:none;z-index:9999;`;
+        const keyframes = `@keyframes cf${i}{to{transform:translate(${(Math.random()-0.5)*200}px,${100+Math.random()*50}vh) rotate(720deg);opacity:0;}}`;
+        const style = document.createElement('style');
+        style.textContent = keyframes;
+        document.head.appendChild(style);
+        container.appendChild(p);
+        setTimeout(() => { p.remove(); style.remove(); }, 3000);
+      }
+    }
+
+    function callNumber() {
+      if (gameOver) return;
+      const remaining = [];
+      for (let n = 1; n <= 75; n++) if (!called.includes(n)) remaining.push(n);
+      if (remaining.length === 0) {
+        endGame('No more numbers. Game over.');
+        return;
+      }
+      let count = 1;
+      if (extraBallUsed) { extraBallUsed = false; count = 2; }
+      for (let k = 0; k < count && remaining.length > 0; k++) {
+        const n = remaining[Math.floor(Math.random() * remaining.length)];
+        called.push(n);
+        remaining.splice(remaining.indexOf(n), 1);
+      }
+      updateCalledDisplay();
+      if (autoDaubUsed) {
+        autoDaubUsed = false;
+        autoDaubAll();
+      } else {
+        renderCard();
+      }
+    }
+
+    function updateCalledDisplay() {
+      document.getElementById('calledDisplay').innerHTML = called.slice(-15).map(n => `<span class="called-num">${n}</span>`).join('');
+    }
+
+    function endGame(msg) {
+      gameOver = true;
+      clearInterval(intervalId);
+      document.getElementById('status').innerHTML = `<span class="win-msg">${msg}</span>`;
+    }
+
+    document.getElementById('autoDaub').onclick = function() {
+      if (gameOver || this.disabled) return;
+      autoDaubUsed = true;
+      this.disabled = true;
+      this.textContent = 'Used';
+    };
+    document.getElementById('extraBall').onclick = function() {
+      if (gameOver || this.disabled) return;
+      extraBallUsed = true;
+      this.disabled = true;
+      this.textContent = 'Used';
+    };
+
+    function startGame() {
+      initCard();
+      called = [];
+      gameOver = false;
+      renderCard();
+      updateCalledDisplay();
+      document.getElementById('status').textContent = 'Waiting for next call...';
+      document.getElementById('autoDaub').disabled = false;
+      document.getElementById('autoDaub').textContent = 'Auto-Daub (1x)';
+      document.getElementById('extraBall').disabled = false;
+      document.getElementById('extraBall').textContent = 'Extra Ball (1x)';
+      autoDaubUsed = false;
+      extraBallUsed = false;
+      intervalId = setInterval(callNumber, 3000);
+    }
+
+    startGame();
+  </script>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scratch Cards</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0D0A0A;
+      color: #F5F0E8;
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .disclaimer { font-size: 0.7rem; color: #888; margin-bottom: 0.5rem; }
+    h1 { color: #FFD700; font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .theme-select {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .theme-btn {
+      background: #1a1515;
+      color: #FFD700;
+      border: 1px solid #FFD700;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .theme-btn.active, .theme-btn:hover { background: #FFD700; color: #0D0A0A; }
+    .theme-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .scratch-area {
+      position: relative;
+      margin-bottom: 1rem;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(255,215,0,0.2);
+    }
+    .scratch-area canvas { display: block; border-radius: 12px; }
+    .result { font-size: 1.1rem; color: #FFD700; margin-bottom: 0.5rem; }
+    .new-card { background: #FFD700; color: #0D0A0A; border: none; padding: 0.5rem 1rem; font-weight: bold; border-radius: 8px; cursor: pointer; }
+    .new-card:hover { background: #ffed4e; }
+  </style>
+</head>
+<body>
+  <div class="disclaimer">FREE DEMO</div>
+  <h1>Scratch Cards</h1>
+  <div class="theme-select" id="themeSelect"></div>
+  <div class="scratch-area">
+    <canvas id="scratchCanvas" width="270" height="270"></canvas>
+  </div>
+  <div class="result" id="result"></div>
+  <button class="new-card" id="newCard">New Card</button>
+
+  <script>
+    const THEMES = [
+      { name: 'Gold', bg: '#1a1515', accent: '#FFD700', scratch: '#4a4545' },
+      { name: 'Ruby', bg: '#1a0a0a', accent: '#E0115F', scratch: '#4a2535' },
+      { name: 'Ocean', bg: '#0a151a', accent: '#00CED1', scratch: '#25354a' },
+      { name: 'Forest', bg: '#0a1a0a', accent: '#32CD32', scratch: '#253a25' }
+    ];
+    const SYMBOLS = ['★','◆','●','▲','♥','♦','♣','♠'];
+    const PRIZES = { 3: 50, 2: 10 };
+    let theme = THEMES[0];
+    let symbols = [];
+    let scratched = [];
+    let scratchPct = 0;
+    let gameOver = false;
+    const canvas = document.getElementById('scratchCanvas');
+    const ctx = canvas.getContext('2d');
+    const scratchCtx = canvas.getContext('2d');
+    let isDrawing = false;
+    let lastX, lastY;
+
+    function initCard() {
+      const counts = {};
+      SYMBOLS.forEach(s => counts[s] = 0);
+      symbols = [];
+      for (let i = 0; i < 9; i++) {
+        const s = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+        symbols.push(s);
+        counts[s] = (counts[s] || 0) + 1;
+      }
+      scratched = Array(9).fill(false);
+      scratchPct = 0;
+      gameOver = false;
+      document.getElementById('result').textContent = 'Scratch to reveal!';
+      document.getElementById('themeSelect').querySelectorAll('.theme-btn').forEach(b => b.disabled = false);
+      draw();
+    }
+
+    function draw() {
+      const cellW = canvas.width / 3;
+      const cellH = canvas.height / 3;
+      ctx.fillStyle = theme.bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = theme.accent;
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          const idx = i * 3 + j;
+          const x = j * cellW, y = i * cellH;
+          ctx.strokeRect(x, y, cellW, cellH);
+          if (scratched[idx]) {
+            ctx.fillStyle = theme.accent;
+            ctx.font = 'bold ' + (cellW * 0.4) + 'px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbols[idx], x + cellW/2, y + cellH/2);
+          } else {
+            ctx.fillStyle = theme.scratch;
+            ctx.fillRect(x + 2, y + 2, cellW - 4, cellH - 4);
+            ctx.fillStyle = theme.accent;
+            ctx.font = 'bold ' + (cellW * 0.35) + 'px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('?', x + cellW/2, y + cellH/2);
+          }
+        }
+      }
+    }
+
+    function getCell(x, y) {
+      const cellW = canvas.width / 3;
+      const cellH = canvas.height / 3;
+      const col = Math.floor(x / cellW);
+      const row = Math.floor(y / cellH);
+      if (col >= 0 && col < 3 && row >= 0 && row < 3) return row * 3 + col;
+      return -1;
+    }
+
+    function scratchAt(x, y) {
+      const cellW = canvas.width / 3;
+      const cellH = canvas.height / 3;
+      const idx = getCell(x, y);
+      if (idx >= 0 && !scratched[idx]) {
+        scratched[idx] = true;
+        scratchPct += 1/9;
+        draw();
+        if (scratchPct >= 0.9 || scratched.every(Boolean)) checkWin();
+      }
+    }
+
+    function checkWin() {
+      const counts = {};
+      symbols.forEach(s => counts[s] = (counts[s] || 0) + 1);
+      const max = Math.max(...Object.values(counts));
+      let prize = 0;
+      if (max >= 3) prize = PRIZES[3] || 50;
+      else if (max >= 2) prize = PRIZES[2] || 10;
+      gameOver = true;
+      document.getElementById('themeSelect').querySelectorAll('.theme-btn').forEach(b => b.disabled = true);
+      document.getElementById('result').textContent = prize > 0 ? 'Match ' + max + '! You won ' + prize + '!' : 'No match. Try again!';
+    }
+
+    function handleStart(e) {
+      isDrawing = true;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      lastX = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+      lastY = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+      lastX *= scaleX;
+      lastY *= scaleY;
+      scratchAt(lastX, lastY);
+      if (scratchPct > 0) document.getElementById('themeSelect').querySelectorAll('.theme-btn').forEach(b => b.disabled = true);
+    }
+
+    function handleMove(e) {
+      if (!isDrawing || gameOver) return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+      const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+      const px = x * scaleX, py = y * scaleY;
+      const steps = Math.max(Math.abs(px - lastX), Math.abs(py - lastY), 1);
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        scratchAt(lastX + (px - lastX) * t, lastY + (py - lastY) * t);
+      }
+      lastX = px;
+      lastY = py;
+    }
+
+    function handleEnd() { isDrawing = false; }
+
+    canvas.addEventListener('mousedown', handleStart);
+    canvas.addEventListener('mousemove', handleMove);
+    canvas.addEventListener('mouseup', handleEnd);
+    canvas.addEventListener('mouseleave', handleEnd);
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); handleStart(e); });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); handleMove(e); });
+    canvas.addEventListener('touchend', handleEnd);
+
+    THEMES.forEach((t, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'theme-btn' + (i === 0 ? ' active' : '');
+      btn.textContent = t.name;
+      btn.onclick = () => {
+        if (gameOver) return;
+        theme = t;
+        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        draw();
+      };
+      document.getElementById('themeSelect').appendChild(btn);
+    });
+
+    document.getElementById('newCard').onclick = initCard;
+    initCard();
+  </script>
+</body>
+</html>

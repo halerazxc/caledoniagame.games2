@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wheel of Fortune</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0D0A0A;
+      color: #F5F0E8;
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .disclaimer { font-size: 0.7rem; color: #888; margin-bottom: 0.5rem; }
+    h1 { color: #FFD700; font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .balance {
+      font-size: 1.2rem;
+      color: #FFD700;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    .wheel-container {
+      position: relative;
+      margin-bottom: 1rem;
+    }
+    canvas {
+      display: block;
+      border-radius: 50%;
+      box-shadow: 0 0 30px rgba(255,215,0,0.3);
+    }
+    .pointer {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 25px solid #FFD700;
+      z-index: 10;
+    }
+    .spin-btn {
+      background: #FFD700;
+      color: #0D0A0A;
+      border: none;
+      padding: 0.75rem 2rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 0.5rem;
+    }
+    .spin-btn:hover:not(:disabled) { background: #ffed4e; transform: scale(1.05); }
+    .spin-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .result { font-size: 1.2rem; color: #FFD700; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="disclaimer">FREE DEMO</div>
+  <h1>Wheel of Fortune</h1>
+  <div class="balance">Balance: <span id="balance">1000</span></div>
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="280" height="280"></canvas>
+  </div>
+  <button class="spin-btn" id="spinBtn">SPIN</button>
+  <div class="result" id="result"></div>
+
+  <script>
+    const SEGMENTS = [1,2,3,5,10,20,1,2,3,5,10,20];
+    const BET = 10;
+    let balance = 1000;
+    let rotation = 0;
+    let spinning = false;
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const center = canvas.width / 2;
+    const radius = center - 10;
+
+    function drawWheel() {
+      const sliceAngle = (2 * Math.PI) / SEGMENTS.length;
+      SEGMENTS.forEach((val, i) => {
+        const start = -Math.PI/2 + i * sliceAngle + rotation;
+        const end = start + sliceAngle;
+        ctx.beginPath();
+        ctx.moveTo(center, center);
+        ctx.arc(center, center, radius, start, end);
+        ctx.closePath();
+        ctx.fillStyle = i % 2 === 0 ? '#1a1515' : '#2a2525';
+        ctx.fill();
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.save();
+        ctx.translate(center + Math.cos(start + sliceAngle/2) * (radius * 0.7), center + Math.sin(start + sliceAngle/2) * (radius * 0.7));
+        ctx.rotate(start + sliceAngle/2 + Math.PI/2);
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 14px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText(val + 'x', 0, 5);
+        ctx.restore();
+      });
+      ctx.beginPath();
+      ctx.arc(center, center, 20, 0, 2*Math.PI);
+      ctx.fillStyle = '#FFD700';
+      ctx.fill();
+      ctx.strokeStyle = '#0D0A0A';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function spin() {
+      if (spinning) return;
+      spinning = true;
+      document.getElementById('spinBtn').disabled = true;
+      document.getElementById('result').textContent = '';
+      balance -= BET;
+      document.getElementById('balance').textContent = balance;
+      const segmentAngle = (2 * Math.PI) / SEGMENTS.length;
+      const targetSegment = Math.floor(Math.random() * SEGMENTS.length);
+      const spins = 5 + Math.random() * 3;
+      const targetStop = -(targetSegment + 0.5) * segmentAngle;
+      const currentNorm = ((rotation % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+      let totalRotation = spins * 2 * Math.PI + targetStop - currentNorm;
+      if (totalRotation < 0) totalRotation += 2 * Math.PI;
+      const duration = 4000;
+      const startTime = performance.now();
+      const startRot = rotation;
+
+      function animate(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        rotation = startRot + totalRotation * easeOut;
+        drawWheel();
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          const mult = SEGMENTS[targetSegment];
+          const win = BET * mult;
+          balance += win;
+          document.getElementById('balance').textContent = balance;
+          document.getElementById('result').textContent = mult + 'x - You won ' + win + '!';
+          spinning = false;
+          document.getElementById('spinBtn').disabled = false;
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+
+    document.getElementById('spinBtn').onclick = spin;
+    drawWheel();
+  </script>
+</body>
+</html>

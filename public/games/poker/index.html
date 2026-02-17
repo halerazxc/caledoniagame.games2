@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Texas Hold'em Poker - FREE DEMO</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0D0A0A;
+      color: #F5F0E8;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 1rem; }
+    header {
+      text-align: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(255,215,0,0.3);
+    }
+    h1 { color: #FFD700; font-size: 1.75rem; }
+    .disclaimer {
+      font-size: 0.75rem;
+      color: rgba(245,240,232,0.6);
+      margin-top: 0.5rem;
+    }
+    .pot-area {
+      text-align: center;
+      padding: 1rem;
+      margin: 1rem 0;
+      background: rgba(255,215,0,0.1);
+      border: 1px solid rgba(255,215,0,0.3);
+      border-radius: 8px;
+    }
+    .pot-label { font-size: 0.85rem; opacity: 0.8; }
+    .pot-amount { font-size: 1.5rem; color: #FFD700; font-weight: bold; }
+    .community-cards {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      min-height: 100px;
+      margin: 1.5rem 0;
+    }
+    .card {
+      width: 56px;
+      height: 78px;
+      background: #fff;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      transition: transform 0.2s;
+    }
+    .card.red { color: #c00; }
+    .card.black { color: #222; }
+    .card.back {
+      background: linear-gradient(135deg, #1a3a5c 0%, #2a5a8c 100%);
+      color: #FFD700;
+      font-size: 0.6rem;
+    }
+    .card.rank { font-size: 1.1rem; }
+    .card.suit { font-size: 0.9rem; }
+    .players-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+    @media (max-width: 600px) {
+      .players-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .player-seat {
+      background: rgba(255,215,0,0.08);
+      border: 1px solid rgba(255,215,0,0.25);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+    }
+    .player-seat.active { border-color: #FFD700; box-shadow: 0 0 12px rgba(255,215,0,0.3); }
+    .player-seat.folded { opacity: 0.5; }
+    .player-name { font-weight: bold; color: #FFD700; margin-bottom: 0.5rem; }
+    .player-chips { font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .player-cards {
+      display: flex;
+      justify-content: center;
+      gap: 0.25rem;
+      min-height: 52px;
+    }
+    .player-cards .card { width: 40px; height: 56px; font-size: 0.8rem; }
+    .player-bet { font-size: 0.8rem; color: #FFD700; margin-top: 0.25rem; }
+    .player-hand { font-size: 0.75rem; opacity: 0.9; margin-top: 0.25rem; }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      margin: 1.5rem 0;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      border: 1px solid #FFD700;
+      background: transparent;
+      color: #FFD700;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+    button:hover:not(:disabled) {
+      background: rgba(255,215,0,0.2);
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button.primary { background: #FFD700; color: #0D0A0A; }
+    button.primary:hover:not(:disabled) { background: #ffed4e; }
+    .bet-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .bet-controls input {
+      width: 80px;
+      padding: 0.5rem;
+      background: #1a1612;
+      border: 1px solid rgba(255,215,0,0.3);
+      color: #F5F0E8;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    .message {
+      text-align: center;
+      padding: 1rem;
+      font-size: 1rem;
+      color: #FFD700;
+      min-height: 2.5rem;
+    }
+    .phase-label {
+      text-align: center;
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Texas Hold'em Poker</h1>
+      <p class="disclaimer">FREE DEMO - No Real Money</p>
+    </header>
+
+    <div class="phase-label" id="phaseLabel">—</div>
+    <div class="pot-area">
+      <div class="pot-label">Pot</div>
+      <div class="pot-amount" id="potAmount">0</div>
+    </div>
+
+    <div class="community-cards" id="communityCards"></div>
+
+    <div class="players-grid" id="playersGrid"></div>
+
+    <div class="message" id="message">Click Deal to start a new hand</div>
+
+    <div class="controls" id="controls">
+      <button id="dealBtn" class="primary">Deal</button>
+    </div>
+  </div>
+
+  <script>
+    const SUITS = ['♠','♥','♦','♣'];
+    const RANKS = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+    const PHASES = ['pre-flop','flop','turn','river','showdown'];
+    const START_CHIPS = 1000;
+    const SMALL_BLIND = 10;
+    const BIG_BLIND = 20;
+
+    function createDeck() {
+      const deck = [];
+      for (let s = 0; s < 4; s++)
+        for (let r = 0; r < 13; r++)
+          deck.push({ suit: s, rank: r, str: RANKS[r] + SUITS[s], red: s % 2 === 1 });
+      return shuffle(deck);
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function evalHand(cards) {
+      if (cards.length < 5) return { rank: 0, name: '—', high: [] };
+      const all = [...cards].sort((a, b) => b.rank - a.rank);
+      const byRank = {};
+      const bySuit = {};
+      all.forEach(c => {
+        byRank[c.rank] = (byRank[c.rank] || 0) + 1;
+        bySuit[c.suit] = (bySuit[c.suit] || 0) + 1;
+      });
+      const counts = Object.values(byRank).sort((a, b) => b - a);
+      const suits = Object.keys(bySuit).length;
+      const ranks = all.map(c => c.rank);
+      const isStraight = () => {
+        const r = [...new Set(ranks)].sort((a, b) => b - a);
+        for (let i = 0; i <= r.length - 5; i++) {
+          if (r[i] - r[i + 4] === 4) return r[i];
+        }
+        if (r.includes(12) && r.includes(3) && r.includes(2) && r.includes(1) && r.includes(0))
+          return 3;
+        return -1;
+      };
+      const str = isStraight();
+      const isFlush = suits === 1;
+      if (isFlush && str >= 0 && ranks.includes(12) && ranks.includes(11))
+        return { rank: 9, name: 'Royal Flush', high: [12] };
+      if (isFlush && str >= 0)
+        return { rank: 8, name: 'Straight Flush', high: [str] };
+      if (counts[0] === 4)
+        return { rank: 7, name: 'Four of a Kind', high: Object.entries(byRank).filter(([,n]) => n === 4).map(([r]) => +r) };
+      if (counts[0] === 3 && counts[1] === 2)
+        return { rank: 6, name: 'Full House', high: Object.entries(byRank).filter(([,n]) => n >= 2).map(([r]) => +r).sort((a,b)=>b-a).slice(0,2) };
+      if (isFlush)
+        return { rank: 5, name: 'Flush', high: ranks.slice(0, 5) };
+      if (str >= 0)
+        return { rank: 4, name: 'Straight', high: [str] };
+      if (counts[0] === 3)
+        return { rank: 3, name: 'Three of a Kind', high: Object.entries(byRank).filter(([,n]) => n === 3).map(([r]) => +r) };
+      if (counts[0] === 2 && counts[1] === 2)
+        return { rank: 2, name: 'Two Pair', high: Object.entries(byRank).filter(([,n]) => n === 2).map(([r]) => +r).sort((a,b)=>b-a).slice(0,2) };
+      if (counts[0] === 2)
+        return { rank: 1, name: 'Pair', high: Object.entries(byRank).filter(([,n]) => n === 2).map(([r]) => +r) };
+      return { rank: 0, name: 'High Card', high: ranks.slice(0, 5) };
+    }
+
+    function bestHand(hole, community) {
+      const all = [...hole, ...community];
+      if (all.length < 5) return evalHand(all);
+      let best = { rank: -1, name: '', high: [] };
+      function comb(arr, k, start, chosen) {
+        if (chosen.length === k) {
+          const res = evalHand(chosen);
+          if (res.rank > best.rank || (res.rank === best.rank && JSON.stringify(res.high) > JSON.stringify(best.high)))
+            best = res;
+          return;
+        }
+        for (let i = start; i < arr.length; i++) {
+          chosen.push(arr[i]);
+          comb(arr, k, i + 1, chosen);
+          chosen.pop();
+        }
+      }
+      comb(all, 5, 0, []);
+      return best;
+    }
+
+    function compareHands(h1, h2) {
+      if (h1.rank !== h2.rank) return h1.rank - h2.rank;
+      for (let i = 0; i < Math.max(h1.high.length, h2.high.length); i++) {
+        const a = h1.high[i] ?? -1, b = h2.high[i] ?? -1;
+        if (a !== b) return a - b;
+      }
+      return 0;
+    }
+
+    const state = {
+      deck: [],
+      community: [],
+      players: [],
+      pot: 0,
+      phase: 0,
+      currentPlayer: 0,
+      dealer: 0,
+      minBet: BIG_BLIND,
+      roundBets: [],
+      toCall: 0,
+      lastRaise: 0,
+      gameOver: true
+    };
+
+    function initPlayers() {
+      state.players = [
+        { name: 'You', chips: START_CHIPS, hole: [], folded: false, bet: 0, isHuman: true },
+        { name: 'AI 1', chips: START_CHIPS, hole: [], folded: false, bet: 0, isHuman: false },
+        { name: 'AI 2', chips: START_CHIPS, hole: [], folded: false, bet: 0, isHuman: false },
+        { name: 'AI 3', chips: START_CHIPS, hole: [], folded: false, bet: 0, isHuman: false }
+      ];
+    }
+
+    function renderCard(c, faceDown = false) {
+      const div = document.createElement('div');
+      div.className = 'card' + (c.red ? ' red' : ' black');
+      if (faceDown) {
+        div.className = 'card back';
+        div.textContent = '🂠';
+        return div;
+      }
+      div.innerHTML = `<span class="rank">${c.str[0]}</span><span class="suit">${c.str[1]}</span>`;
+      return div;
+    }
+
+    function render() {
+      document.getElementById('phaseLabel').textContent = PHASES[state.phase] || '—';
+      document.getElementById('potAmount').textContent = state.pot;
+
+      const cc = document.getElementById('communityCards');
+      cc.innerHTML = '';
+      const toShow = state.phase >= 1 ? 3 : 0;
+      const turn = state.phase >= 2 ? 1 : 0;
+      const river = state.phase >= 3 ? 1 : 0;
+      for (let i = 0; i < toShow + turn + river; i++) {
+        cc.appendChild(renderCard(state.community[i]));
+      }
+
+      const grid = document.getElementById('playersGrid');
+      grid.innerHTML = '';
+      state.players.forEach((p, i) => {
+        const seat = document.createElement('div');
+        seat.className = 'player-seat' + (i === state.currentPlayer && !state.gameOver ? ' active' : '') + (p.folded ? ' folded' : '');
+        seat.innerHTML = `
+          <div class="player-name">${p.name}</div>
+          <div class="player-chips">${p.chips} chips</div>
+          <div class="player-cards"></div>
+          ${p.bet ? `<div class="player-bet">Bet: ${p.bet}</div>` : ''}
+          <div class="player-hand" id="hand${i}"></div>
+        `;
+        const cardsDiv = seat.querySelector('.player-cards');
+        const showHole = state.phase >= 4 || (p.isHuman && !p.folded) || state.gameOver;
+        p.hole.forEach(c => cardsDiv.appendChild(renderCard(c, !showHole)));
+        if (state.phase >= 4 && !p.folded && state.community.length >= 5) {
+          const hand = bestHand(p.hole, state.community);
+          seat.querySelector('.player-hand').textContent = hand.name;
+        }
+        grid.appendChild(seat);
+      });
+
+      const msg = document.getElementById('message');
+      const ctrls = document.getElementById('controls');
+
+      if (state.gameOver) {
+        const canDeal = state.players[0].chips >= BIG_BLIND;
+        msg.textContent = canDeal ? 'Click Deal to start a new hand' : 'Out of chips! Click New Game to reset.';
+        ctrls.innerHTML = canDeal
+          ? '<button id="dealBtn" class="primary">Deal</button>'
+          : '<button id="newGameBtn" class="primary">New Game</button>';
+        if (canDeal) document.getElementById('dealBtn').onclick = deal;
+        else document.getElementById('newGameBtn').onclick = () => { initPlayers(); render(); };
+        return;
+      }
+
+      const human = state.players[0];
+      if (human.folded) {
+        msg.textContent = "You folded. Waiting for round to finish.";
+        ctrls.innerHTML = '';
+        setTimeout(nextTurn, 800);
+        return;
+      }
+
+      if (state.currentPlayer === 0) {
+        const toCall = state.toCall - human.bet;
+        msg.textContent = toCall > 0 ? `Call ${toCall} or raise` : 'Check or raise';
+        ctrls.innerHTML = `
+          <div class="bet-controls">
+            <button id="foldBtn">Fold</button>
+            <button id="checkBtn" ${toCall > 0 ? 'disabled' : ''}>Check</button>
+            <button id="callBtn" ${toCall <= 0 ? 'disabled' : ''}>Call ${toCall}</button>
+            <input type="number" id="raiseInput" min="${state.minBet}" max="${human.chips}" value="${Math.min(state.minBet, human.chips)}" />
+            <button id="raiseBtn">Raise</button>
+          </div>
+        `;
+        document.getElementById('foldBtn').onclick = () => act(0, 'fold');
+        document.getElementById('checkBtn').onclick = () => act(0, 'check');
+        document.getElementById('callBtn').onclick = () => act(0, 'call');
+        document.getElementById('raiseBtn').onclick = () => {
+          const amt = parseInt(document.getElementById('raiseInput').value, 10) || state.minBet;
+          act(0, 'raise', Math.min(amt, human.chips));
+        };
+      } else {
+        msg.textContent = `${state.players[state.currentPlayer].name}'s turn`;
+        ctrls.innerHTML = '';
+        setTimeout(aiTurn, 600);
+      }
+    }
+
+    function act(pid, action, amount = 0) {
+      const p = state.players[pid];
+      if (action === 'fold') {
+        p.folded = true;
+      } else if (action === 'check') {
+        // no op
+      } else if (action === 'call') {
+        const amt = Math.min(state.toCall - p.bet, p.chips);
+        p.chips -= amt;
+        p.bet += amt;
+        state.pot += amt;
+      } else if (action === 'raise') {
+        const total = state.toCall - p.bet + Math.max(0, amount - state.toCall);
+        const amt = Math.min(total, p.chips);
+        p.chips -= amt;
+        p.bet += amt;
+        state.pot += amt;
+        state.toCall = p.bet;
+        state.minBet = state.toCall + BIG_BLIND;
+      }
+      nextTurn();
+    }
+
+    function aiTurn() {
+      const p = state.players[state.currentPlayer];
+      const toCall = state.toCall - p.bet;
+      const hand = bestHand(p.hole, state.community);
+      const r = Math.random();
+      if (toCall > p.chips * 0.5 && hand.rank < 1) {
+        act(state.currentPlayer, 'fold');
+      } else if (toCall === 0) {
+        act(state.currentPlayer, 'check');
+      } else if (toCall > 0 && (hand.rank >= 2 || r < 0.6)) {
+        act(state.currentPlayer, 'call');
+      } else if (hand.rank >= 3 && r < 0.5) {
+        const raiseAmt = state.minBet + Math.floor(Math.random() * BIG_BLIND * 2);
+        act(state.currentPlayer, 'raise', raiseAmt);
+      } else {
+        act(state.currentPlayer, toCall > 0 ? 'call' : 'check');
+      }
+    }
+
+    function nextTurn() {
+      const active = state.players.filter(x => !x.folded);
+      if (active.length <= 1) {
+        endHand();
+        return;
+      }
+      let next = (state.currentPlayer + 1) % 4;
+      while (state.players[next].folded) next = (next + 1) % 4;
+      state.currentPlayer = next;
+      const allMatched = state.players.filter(p => !p.folded).every(p => p.bet === state.toCall);
+      const allChecked = state.toCall === 0 && state.players.filter(p => !p.folded).every(p => p.bet === 0);
+      if (allMatched || allChecked) {
+        state.phase++;
+        if (state.phase >= 4) {
+          endHand();
+          return;
+        }
+        state.players.forEach(p => { p.bet = 0; });
+        state.toCall = 0;
+        state.minBet = BIG_BLIND;
+        if (state.phase === 1) state.community.push(...state.deck.splice(0, 3));
+        else if (state.phase >= 2) state.community.push(state.deck.shift());
+        state.currentPlayer = (state.dealer + 1) % 4;
+        while (state.players[state.currentPlayer].folded) state.currentPlayer = (state.currentPlayer + 1) % 4;
+      }
+      render();
+    }
+
+    function endHand() {
+      const active = state.players.filter(p => !p.folded);
+      let winner = -1;
+      if (active.length === 1) {
+        winner = state.players.indexOf(active[0]);
+      } else {
+        let best = null;
+        active.forEach(p => {
+          const h = bestHand(p.hole, state.community);
+          if (!best || compareHands(h, best) > 0) {
+            best = h;
+            winner = state.players.indexOf(p);
+          }
+        });
+      }
+      if (winner >= 0) {
+        state.players[winner].chips += state.pot;
+      }
+      state.gameOver = true;
+      state.phase = 4;
+      render();
+      const msg = document.getElementById('message');
+      msg.textContent = winner >= 0 ? `${state.players[winner].name} wins ${state.pot} chips!` : 'Hand over';
+    }
+
+    function deal() {
+      const activeCount = state.players.filter(p => p.chips >= BIG_BLIND).length;
+      if (activeCount < 2) {
+        initPlayers();
+        render();
+        return;
+      }
+      state.deck = createDeck();
+      state.community = [];
+      state.pot = 0;
+      state.phase = 0;
+      state.dealer = (state.dealer + 1) % 4;
+      state.minBet = BIG_BLIND;
+      state.toCall = BIG_BLIND;
+      state.lastRaise = BIG_BLIND;
+      state.gameOver = false;
+
+      state.players.forEach(p => {
+        p.hole = state.deck.splice(0, 2);
+        p.folded = p.chips <= 0;
+        p.bet = 0;
+      });
+
+      const sb = (state.dealer + 1) % 4;
+      const bb = (state.dealer + 2) % 4;
+      if (state.players[sb].chips < SMALL_BLIND || state.players[bb].chips < BIG_BLIND) {
+        initPlayers();
+        render();
+        return;
+      }
+      state.players[sb].chips -= SMALL_BLIND;
+      state.players[sb].bet = SMALL_BLIND;
+      state.players[bb].chips -= BIG_BLIND;
+      state.players[bb].bet = BIG_BLIND;
+      state.pot = SMALL_BLIND + BIG_BLIND;
+      state.currentPlayer = (state.dealer + 3) % 4;
+      while (state.players[state.currentPlayer].chips <= 0)
+        state.currentPlayer = (state.currentPlayer + 1) % 4;
+
+      render();
+    }
+
+    initPlayers();
+    render();
+  </script>
+</body>
+</html>

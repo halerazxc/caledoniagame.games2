@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Match</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0D0A0A;
+      color: #F5F0E8;
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .disclaimer { font-size: 0.7rem; color: #888; margin-bottom: 0.5rem; }
+    h1 { color: #FFD700; font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .stats { display: flex; gap: 1.5rem; margin-bottom: 1rem; font-size: 1rem; color: #FFD700; }
+    .difficulty { margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+    .diff-btn {
+      background: #1a1515;
+      color: #FFD700;
+      border: 1px solid #FFD700;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .diff-btn.active, .diff-btn:hover { background: #FFD700; color: #0D0A0A; }
+    .diff-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .grid {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 1rem;
+    }
+    .card {
+      width: clamp(45px, 10vw, 70px);
+      height: clamp(55px, 12vw, 90px);
+      background: linear-gradient(135deg, #2a2525, #1a1515);
+      border: 2px solid #FFD700;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(1.2rem, 3vw, 2rem);
+      cursor: pointer;
+      transition: transform 0.3s, background 0.3s;
+      transform-style: preserve-3d;
+    }
+    .card.flipped { background: #FFD700; color: #0D0A0A; }
+    .card.matched { opacity: 0.5; cursor: default; border-color: #32CD32; }
+    .card:not(.matched):hover { transform: scale(1.05); }
+    .win-msg { font-size: 1.2rem; font-weight: bold; color: #32CD32; }
+  </style>
+</head>
+<body>
+  <div class="disclaimer">FREE DEMO</div>
+  <h1>Memory Match</h1>
+  <div class="stats">
+    <span>Moves: <span id="moves">0</span></span>
+    <span>Time: <span id="time">0</span>s</span>
+  </div>
+  <div class="difficulty" id="diffBtns"></div>
+  <div class="grid" id="grid"></div>
+  <div id="winMsg"></div>
+
+  <script>
+    const DIFFICULTIES = [
+      { name: '4×4', rows: 4, cols: 4 },
+      { name: '5×4', rows: 4, cols: 5 },
+      { name: '6×5', rows: 5, cols: 6 }
+    ];
+    const EMOJIS = ['🎮','🎲','🎯','🎪','🎨','🎭','🎸','🎺','🎷','🎹','🃏','🌟','⭐','🔥','💎','🏆'];
+    let cards = [];
+    let flipped = [];
+    let moves = 0;
+    let timerId;
+    let startTime;
+    let currentDiff = 0;
+
+    function createDeck(rows, cols) {
+      const total = rows * cols;
+      const pairs = total / 2;
+      const pool = EMOJIS.slice(0, Math.min(pairs, EMOJIS.length));
+      while (pool.length < pairs) pool.push('?' + pool.length);
+      const deck = [...pool, ...pool];
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      return deck;
+    }
+
+    function startGame(diffIndex) {
+      currentDiff = diffIndex;
+      const d = DIFFICULTIES[diffIndex];
+      cards = createDeck(d.rows, d.cols).map((v, i) => ({ id: i, value: v, flipped: false, matched: false }));
+      flipped = [];
+      moves = 0;
+      startTime = Date.now();
+      clearInterval(timerId);
+      document.getElementById('moves').textContent = '0';
+      document.getElementById('time').textContent = '0';
+      document.getElementById('winMsg').textContent = '';
+      document.getElementById('diffBtns').querySelectorAll('.diff-btn').forEach((b, i) => {
+        b.disabled = false;
+        b.classList.toggle('active', i === diffIndex);
+      });
+      timerId = setInterval(() => {
+        document.getElementById('time').textContent = Math.floor((Date.now() - startTime) / 1000);
+      }, 1000);
+      render();
+    }
+
+    function render() {
+      const d = DIFFICULTIES[currentDiff];
+      const grid = document.getElementById('grid');
+      grid.style.gridTemplateColumns = `repeat(${d.cols}, 1fr)`;
+      grid.innerHTML = '';
+      cards.forEach((card, i) => {
+        const el = document.createElement('div');
+        el.className = 'card' + (card.flipped ? ' flipped' : '') + (card.matched ? ' matched' : '');
+        el.textContent = card.flipped || card.matched ? card.value : '?';
+        el.dataset.i = i;
+        el.onclick = () => flip(i);
+        grid.appendChild(el);
+      });
+    }
+
+    function flip(i) {
+      const card = cards[i];
+      if (card.flipped || card.matched || flipped.length >= 2) return;
+      card.flipped = true;
+      flipped.push(i);
+      moves++;
+      document.getElementById('moves').textContent = moves;
+      render();
+      if (flipped.length === 2) {
+        const [a, b] = flipped;
+        if (cards[a].value === cards[b].value) {
+          cards[a].matched = cards[b].matched = true;
+          flipped = [];
+          render();
+          if (cards.every(c => c.matched)) {
+            clearInterval(timerId);
+            document.getElementById('winMsg').innerHTML = '<span class="win-msg">You won in ' + moves + ' moves!</span>';
+            document.getElementById('diffBtns').querySelectorAll('.diff-btn').forEach(b => b.disabled = true);
+          }
+        } else {
+          setTimeout(() => {
+            cards[a].flipped = cards[b].flipped = false;
+            flipped = [];
+            render();
+          }, 800);
+        }
+      }
+    }
+
+    DIFFICULTIES.forEach((d, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'diff-btn' + (i === 0 ? ' active' : '');
+      btn.textContent = d.name;
+      btn.onclick = () => startGame(i);
+      document.getElementById('diffBtns').appendChild(btn);
+    });
+    startGame(0);
+  </script>
+</body>
+</html>
