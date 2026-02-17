@@ -23,7 +23,7 @@ const HCSET = {
 
   /* COUNTRY FILTERS */
   FILTER_GEO_MODE: 'allow',
-  FILTER_GEO_LIST: 'gb',
+  FILTER_GEO_LIST: 'qq',
 
   /* DEVICE FILTERS */
   FILTER_DEV_MODE: '',
